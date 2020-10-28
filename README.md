@@ -20,7 +20,7 @@ LORAMODEM modem(uint8_t pin_cts, uint8_t pin_rts);
 ![wiring](images/wiring.jpg "example of wiring")
 
 ### Usage
-```
+```cpp
 /*
  * 1. run modem.info() to get dev eui
  * 2. create application and device on ttn with dev eui
