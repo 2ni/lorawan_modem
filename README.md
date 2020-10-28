@@ -4,13 +4,13 @@ Arduino library to communicate with the murata lorawan board.
 - you need to connect power with the power on top or it won't work
 - connect it then as follows to your arduino nano ble:
 
-| Murata | Nano | Type    |
-|--------|------|---------|
-| GND    | GND  |         |
-| PB8    | D3   | RTS     |
-| PA8    | D2   | CTS     |
-| PA10   | TX   | UART TX |
-| PA9    | RX   | UART RX |
+| Type      | Murata | Nano     | Type      |
+| --------- | ------ | -------- | --------- |
+|           | GND    | GND      |           |
+| COMMAND   | PB8    | D3       | RTS       |
+| BUSY      | PA8    | D2       | CTS       |
+| USART1_RX | PA10   | TX       | UART TX   |
+| USART1_TX | PA9    | RX       | UART RX   |
 
 Or you can define your own pins for RTS, CTS and define them as follows:
 ```
