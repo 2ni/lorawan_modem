@@ -46,13 +46,13 @@ Status LORAMODEM::write(Lora_cmd cmd) {
 }
 
 Status LORAMODEM::write(Lora_cmd cmd, uint8_t *payload, uint8_t len) {
-
   digitalWrite(_pin_rts, LOW);
   unsigned long now = millis();
   // wait for modem to set busy line low with 10ms timeout
   while (digitalRead(_pin_cts) == HIGH) {
     if ((millis()-now) > 10) {
       Serial.println(DBG_ERR("cts timeout"));
+      digitalWrite(_pin_rts, HIGH);
       return TIMEOUT;
     }
   }
@@ -73,12 +73,11 @@ Status LORAMODEM::write(Lora_cmd cmd, uint8_t *payload, uint8_t len) {
   now = millis();
   while (digitalRead(_pin_cts) == LOW) {
     if ((millis()-now) > 200) {
-      Serial.println(DBG_ERR("cts timeout"));
+      Serial.println(DBG_ERR("cts release timeout"));
       return TIMEOUT;
     }
   }
   return OK;
-  Serial.println("sent");
 }
 
 Status LORAMODEM::read(uint8_t *payload, uint8_t *len) {
@@ -91,10 +90,10 @@ Status LORAMODEM::read(uint8_t *payload, uint8_t *len) {
     }
   }
 
-  Status code = (Status)modem.read();
-  if (code != OK) {
-    Serial.printf("code: 0x%02x\n", code);
-    return code;
+  Status rc = (Status)modem.read();
+  if (rc != OK) {
+    Serial.printf(DBG_ERR("receive error: 0x%02x") "\n", rc);
+    return rc;
   }
 
   while (!modem.available()) {}
@@ -102,8 +101,16 @@ Status LORAMODEM::read(uint8_t *payload, uint8_t *len) {
   if (l) {
     modem.readBytes(payload, l);
   }
-  *len = l;
 
+  while (!modem.available()) {}
+  uint8_t chk = modem.read();
+
+  if (chk != _calc_crc(rc, payload, l)) {
+    Serial.printf(DBG_ERR("invalid crc: 0x%02x") "\n", chk);
+    return BADCRC;
+  }
+
+  *len = l;
   return OK;
 }
 
