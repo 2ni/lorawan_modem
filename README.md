@@ -33,6 +33,9 @@ LORAMODEM modem(uint8_t pin_cts, uint8_t pin_rts);
 LORAMODEM modem;
 
 void setup() {
+  Serial.begin(9600);
+  while (!Serial);
+  
   modem.begin();
   /*
   const uint8_t appeui[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };

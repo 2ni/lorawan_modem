@@ -1,25 +1,100 @@
 #include <Arduino.h>
 #include "loramodem.h"
 
-LORAMODEM::LORAMODEM() : modem(LORA_TX, LORA_RX, NC, NC) {
-  _pin_cts = 2;
-  _pin_rts = 3;
-}
-
-LORAMODEM::LORAMODEM(uint8_t pin_cts, uint8_t pin_rts) : modem(LORA_TX, LORA_RX, NC, NC) {
+LoRaWANModem::LoRaWANModem(uint8_t pin_cts, uint8_t pin_rts) : uart(LORA_TX, LORA_RX, NC, NC) {
   _pin_cts = pin_cts;
-  _pin_rts = _pin_rts;
+  _pin_rts = pin_rts;
 }
 
-void LORAMODEM::begin() {
+void LoRaWANModem::begin() {
   pinMode(_pin_rts, OUTPUT);
   digitalWrite(_pin_rts, HIGH);
   pinMode(_pin_cts, INPUT);
 
-  modem.begin(115200); // data bits 8, stop bits 1, parity none
+  uart.begin(115200); // data bits 8, stop bits 1, parity none
 }
 
-uint8_t LORAMODEM::_calc_crc(uint8_t cmd, const uint8_t *payload, uint8_t len) {
+Status LoRaWANModem::join(const uint8_t *appeui, const uint8_t *appkey) {
+  Status s;
+
+  s = write(CMD_SETJOINEUI, appeui, 8);
+  if (s != OK) {
+    Serial.printf(DBG_ERR("set app eui error: 0x%02x") "\n", (uint8_t)s);
+    return s;
+  }
+
+  s = write(CMD_SETNWKKEY, appkey, 16);
+  if (s != OK) {
+    Serial.printf(DBG_ERR("set appkey error: 0x%02x") "\n", (uint8_t)s);
+    return s;
+  }
+
+  s = write(CMD_JOIN);
+  if (s != OK) {
+    Serial.printf(DBG_ERR("join error: 0x%02x") "\n", (uint8_t)s);
+    return s;
+  }
+  return OK;
+}
+
+bool LoRaWANModem::is_joining(void (*join_done)(Event_code code)) {
+  uint8_t len;
+  uint8_t response[3] = {0};
+  Status s = command(CMD_GETEVENT, response, &len);
+  if (s != OK) {
+    Serial.printf(DBG_ERR("join event cmd error: 0x%02x") "\n", (uint8_t)s);
+  }
+  Serial.printf("join resp: 0x%02x\n", response[0]);
+
+  if (response[0] == EVT_JOINED || response[0] == EVT_JOINFAIL) {
+    if (join_done != NULL) {
+      join_done((Event_code)response[0]);
+    }
+    return false;
+  }
+
+  return true;
+}
+
+bool LoRaWANModem::is_joining() {
+  return is_joining(NULL);
+}
+
+Status LoRaWANModem::send(const uint8_t *data, uint8_t len, uint8_t port, uint8_t confirm) {
+  uint8_t payload_len = len + 2;
+  uint8_t payload[255];
+
+  payload[0] = port;
+  payload[1] = confirm;
+  for (uint8_t i=0; i<len; i++) {
+    payload[2+i] = data[i];
+  }
+
+  Status sw = write(CMD_REQUESTTX, payload, payload_len);
+  if (sw != OK) {
+    Serial.printf(DBG_ERR("tx cmd error: 0x%02x") "\n", (uint8_t)sw);
+    return sw;
+  }
+
+  /*
+  uint8_t event_len;
+  uint8_t event_resp[3] = {0};
+
+  Status se = command(CMD_GETEVENT, event_resp, &event_len);
+  if (se != OK) {
+    Serial.printf(DBG_ERR("tx event cmd error: %02x") "\n", (uint8_t)se);
+  }
+
+  if (event_resp[0] == EVT_TXDONE) {
+    tx_done((Event_code)event_resp[0]);
+    return false;
+  }
+  */
+
+  return OK;
+}
+
+uint8_t LoRaWANModem::_calc_crc(uint8_t cmd, const uint8_t *payload, uint8_t len) {
   uint8_t crc = cmd^len;
   if (payload == NULL) return crc;
 
@@ -30,25 +105,25 @@ uint8_t LORAMODEM::_calc_crc(uint8_t cmd, const uint8_t *payload, uint8_t len) {
   return crc;
 }
 
-Status LORAMODEM::command(Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload, uint8_t *response, uint8_t *len_response) {
+Status LoRaWANModem::command(Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload, uint8_t *response, uint8_t *len_response) {
   Status sw = write(cmd, payload, len_payload);
   if (sw != OK) return sw;
 
   return read(response, len_response);
 }
 
-Status LORAMODEM::command(Lora_cmd cmd, uint8_t *response, uint8_t *len_response) {
+Status LoRaWANModem::command(Lora_cmd cmd, uint8_t *response, uint8_t *len_response) {
   return command(cmd, NULL, 0, response, len_response);
 }
 
-Status LORAMODEM::write(Lora_cmd cmd) {
+Status LoRaWANModem::write(Lora_cmd cmd) {
   return write(cmd, NULL, 0);
 }
 
-Status LORAMODEM::write(Lora_cmd cmd, const uint8_t *payload, uint8_t len) {
+Status LoRaWANModem::write(Lora_cmd cmd, const uint8_t *payload, uint8_t len) {
   digitalWrite(_pin_rts, LOW);
   unsigned long now = millis();
-  // wait for modem to set busy line low with 10ms timeout
+  // wait for uart to set busy line low with 10ms timeout
   while (digitalRead(_pin_cts) == HIGH) {
     if ((millis()-now) > 10) {
       Serial.println(DBG_ERR("cts timeout"));
@@ -57,19 +132,19 @@ Status LORAMODEM::write(Lora_cmd cmd, const uint8_t *payload, uint8_t len) {
     }
   }
 
-  modem.write(cmd);
-  modem.write(len);
+  uart.write(cmd);
+  uart.write(len);
 
   for (uint8_t i=0; i<len; i++) {
-    modem.write(payload[i]);
+    uart.write(payload[i]);
   }
-  modem.write(_calc_crc(cmd, payload, len));
+  uart.write(_calc_crc(cmd, payload, len));
 
   delay(25);
 
   digitalWrite(_pin_rts, HIGH);
 
-  // wait for modem to set busy line high again
+  // wait for uart to set busy line high again
   now = millis();
   while (digitalRead(_pin_cts) == LOW) {
     if ((millis()-now) > 200) {
@@ -77,33 +152,34 @@ Status LORAMODEM::write(Lora_cmd cmd, const uint8_t *payload, uint8_t len) {
       return TIMEOUT;
     }
   }
+  delay(25); // seems to many write at a time results to cts timeouts
   return OK;
 }
 
-Status LORAMODEM::read(uint8_t *payload, uint8_t *len) {
+Status LoRaWANModem::read(uint8_t *payload, uint8_t *len) {
   unsigned long now = millis();
   // wait for data with 100ms timeout
-  while (!modem.available()) {
+  while (!uart.available()) {
     if ((millis()-now) > 100) {
       Serial.println(DBG_ERR("receive timeout"));
       return TIMEOUT;
     }
   }
 
-  Status rc = (Status)modem.read();
+  Status rc = (Status)uart.read();
   if (rc != OK) {
     Serial.printf(DBG_ERR("receive error: 0x%02x") "\n", rc);
     return rc;
   }
 
-  while (!modem.available()) {}
-  uint8_t l = modem.read();
+  while (!uart.available()) {}
+  uint8_t l = uart.read();
   if (l) {
-    modem.readBytes(payload, l);
+    uart.readBytes(payload, l);
   }
 
-  while (!modem.available()) {}
-  uint8_t chk = modem.read();
+  while (!uart.available()) {}
+  uint8_t chk = uart.read();
 
   if (chk != _calc_crc(rc, payload, l)) {
     Serial.printf(DBG_ERR("invalid crc: 0x%02x") "\n", chk);
@@ -114,7 +190,7 @@ Status LORAMODEM::read(uint8_t *payload, uint8_t *len) {
   return OK;
 }
 
-void LORAMODEM::info() {
+void LoRaWANModem::info() {
   cmd_and_result("version", CMD_GETVERSION);
   cmd_and_result("status", CMD_GETSTATUS);
   cmd_and_result("chip id", CMD_GETCHIPEUI);
@@ -123,11 +199,11 @@ void LORAMODEM::info() {
   cmd_and_result("region", CMD_GETREGION);
 }
 
-void LORAMODEM::cmd_and_result(const char *name, Lora_cmd cmd) {
+void LoRaWANModem::cmd_and_result(const char *name, Lora_cmd cmd) {
   cmd_and_result(name, cmd, NULL, 0);
 }
 
-void LORAMODEM::cmd_and_result(const char *name, Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload) {
+void LoRaWANModem::cmd_and_result(const char *name, Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload) {
   uint8_t response[255] = {0};
   uint8_t len = 0;
 
@@ -141,7 +217,7 @@ void LORAMODEM::cmd_and_result(const char *name, Lora_cmd cmd, const uint8_t *pa
   }
 }
 
-void LORAMODEM::print_arr(uint8_t *arr, uint8_t len) {
+void LoRaWANModem::print_arr(uint8_t *arr, uint8_t len) {
   for (uint8_t i=0; i<len; i++) {
     Serial.printf(" %02x", arr[i]);
   }

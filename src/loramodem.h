@@ -27,6 +27,20 @@ typedef enum {
 } Status;
 
 typedef enum {
+  EVT_RESET            = 0x00,
+  EVT_ALARM            = 0x01,
+  EVT_JOINED           = 0x02,
+  EVT_TXDONE           = 0x03,
+  EVT_DOWNDATA         = 0x04,
+  EVT_UPLOADDONE       = 0x05,
+  EVT_SETCONF          = 0x06,
+  EVT_MUTE             = 0x07,
+  EVT_STREAMDONE       = 0x08,
+  EVT_LINKSTATUS       = 0x09,
+  EVT_JOINFAIL         = 0x0A
+} Event_code;
+
+typedef enum {
   CMD_GETEVENT         = 0x00,
   CMD_GETVERSION       = 0x01,
   CMD_RESET            = 0x02,
@@ -84,11 +98,15 @@ typedef enum {
   CMD_SETDEVICEINFO    = 0x36
 } Lora_cmd;
 
-class LORAMODEM {
+class LoRaWANModem {
   public:
-    LORAMODEM();
-    LORAMODEM(uint8_t pin_cts, uint8_t pin_rts);
+    LoRaWANModem(uint8_t pin_cts = 2, uint8_t pin_rts = 3);
     void begin();
+    Status join(const uint8_t *appeui, const uint8_t *appkey);
+    bool is_joining(void (*callback)(Event_code code));
+    bool is_joining();
+    Status send(const uint8_t *data, uint8_t len, uint8_t port = 0x01, uint8_t confirm = 0x00);
+
     Status command(Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload, uint8_t *response, uint8_t *len_response);
     Status command(Lora_cmd cmd, uint8_t *response, uint8_t *len_response);
     Status write(Lora_cmd cmd);
@@ -101,7 +119,7 @@ class LORAMODEM {
 
   private:
     uint8_t _calc_crc(uint8_t cmd, const uint8_t *payload, uint8_t len);
-    UART modem;
+    UART uart;
     uint8_t _pin_cts;
     uint8_t _pin_rts;
 };
