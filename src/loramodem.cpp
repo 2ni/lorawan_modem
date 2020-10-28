@@ -44,7 +44,6 @@ bool LoRaWANModem::is_joining(void (*join_done)(Event_code code)) {
   if (s != OK) {
     Serial.printf(DBG_ERR("join event cmd error: 0x%02x") "\n", (uint8_t)s);
   }
-  Serial.printf("join resp: 0x%02x\n", response[0]);
 
   if (response[0] == EVT_JOINED || response[0] == EVT_JOINFAIL) {
     if (join_done != NULL) {
