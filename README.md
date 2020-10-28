@@ -21,17 +21,31 @@ LORAMODEM modem(uint8_t pin_cts, uint8_t pin_rts);
 
 ### Usage
 ```
+/*
+ * 1. run modem.info() to get dev eui
+ * 2. create application and device on ttn with dev eui
+ * 3. use app eui and app key from ttn and set it in murata with CMD_SETJOINEUI, CMD_SETNWKKEY
+ *
+ */
+
 #include "loramodem.h"
 
 LORAMODEM modem;
 
 void setup() {
   modem.begin();
-  uint8_t response[255] = {0};
-  uint   len = 0;
- 
-  modem.command(CMD_GETVERSION, response, &len);
-  modem.print_arr("response", response, len);
+  /*
+  const uint8_t appeui[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+  modem.cmd_and_result("set app eui", CMD_SETJOINEUI, appeui, 8);
+  const uint8_t appkey[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+  modem.cmd_and_result("set app key", CMD_SETNWKKEY, appkey, 16);
+  */
+  modem.info();
+  modem.cmd_and_result("join", CMD_JOIN);
+
+  //                     port, unconf, data
+  uint8_t payload[5] = { 0x01, 0x00, 0x12, 0x13, 0x14 };
+  modem.cmd_and_result("send data", CMD_REQUESTTX, payload, 5);
 }
 
 void loop() {

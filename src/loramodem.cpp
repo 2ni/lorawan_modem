@@ -30,7 +30,7 @@ uint8_t LORAMODEM::_calc_crc(uint8_t cmd, const uint8_t *payload, uint8_t len) {
   return crc;
 }
 
-Status LORAMODEM::command(Lora_cmd cmd, uint8_t *payload, uint8_t len_payload, uint8_t *response, uint8_t *len_response) {
+Status LORAMODEM::command(Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload, uint8_t *response, uint8_t *len_response) {
   Status sw = write(cmd, payload, len_payload);
   if (sw != OK) return sw;
 
@@ -45,7 +45,7 @@ Status LORAMODEM::write(Lora_cmd cmd) {
   return write(cmd, NULL, 0);
 }
 
-Status LORAMODEM::write(Lora_cmd cmd, uint8_t *payload, uint8_t len) {
+Status LORAMODEM::write(Lora_cmd cmd, const uint8_t *payload, uint8_t len) {
   digitalWrite(_pin_rts, LOW);
   unsigned long now = millis();
   // wait for modem to set busy line low with 10ms timeout
@@ -114,8 +114,34 @@ Status LORAMODEM::read(uint8_t *payload, uint8_t *len) {
   return OK;
 }
 
-void LORAMODEM::print_arr(const char *name, uint8_t *arr, uint8_t len) {
-  Serial.printf("%s:", name);
+void LORAMODEM::info() {
+  cmd_and_result("version", CMD_GETVERSION);
+  cmd_and_result("status", CMD_GETSTATUS);
+  cmd_and_result("chip id", CMD_GETCHIPEUI);
+  cmd_and_result("dev eui", CMD_GETDEVEUI);
+  cmd_and_result("app eui", CMD_GETJOINEUI);
+  cmd_and_result("region", CMD_GETREGION);
+}
+
+void LORAMODEM::cmd_and_result(const char *name, Lora_cmd cmd) {
+  cmd_and_result(name, cmd, NULL, 0);
+}
+
+void LORAMODEM::cmd_and_result(const char *name, Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload) {
+  uint8_t response[255] = {0};
+  uint8_t len = 0;
+
+  Serial.printf("%s: ", name);
+
+  if (command(cmd, payload, len_payload, response, &len) == OK) {
+    Serial.print(DBG_OK("ok"));
+    print_arr(response, len);
+  } else {
+    Serial.println(DBG_ERR("failed"));
+  }
+}
+
+void LORAMODEM::print_arr(uint8_t *arr, uint8_t len) {
   for (uint8_t i=0; i<len; i++) {
     Serial.printf(" %02x", arr[i]);
   }

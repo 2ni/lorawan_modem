@@ -6,7 +6,8 @@
 #define LORA_TX       SERIAL1_TX  // PA10 U1RX
 #define LORA_RX       SERIAL1_RX  // PA9 U1TX
 
-#define DBG_ERR(str)  "\033[31;1m" str "\033[0m"  // output in red
+#define DBG_ERR(str) "\033[31;1m" str "\033[0m"  // output in red
+#define DBG_OK(str)  "\033[32;1m" str "\033[0m"  // output in green
 
 typedef enum {
   OK = 0x00,
@@ -88,12 +89,15 @@ class LORAMODEM {
     LORAMODEM();
     LORAMODEM(uint8_t pin_cts, uint8_t pin_rts);
     void begin();
-    Status command(Lora_cmd cmd, uint8_t *payload, uint8_t len_payload, uint8_t *response, uint8_t *len_response);
+    Status command(Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload, uint8_t *response, uint8_t *len_response);
     Status command(Lora_cmd cmd, uint8_t *response, uint8_t *len_response);
     Status write(Lora_cmd cmd);
-    Status write(Lora_cmd cmd, uint8_t *payload, uint8_t len);
+    Status write(Lora_cmd cmd, const uint8_t *payload, uint8_t len);
     Status read(uint8_t *payload, uint8_t *len);
-    void print_arr(const char *name, uint8_t *arr, uint8_t len);
+    void info();
+    void cmd_and_result(const char *name, Lora_cmd cmd);
+    void cmd_and_result(const char *name, Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload);
+    void print_arr(uint8_t *arr, uint8_t len);
 
   private:
     uint8_t _calc_crc(uint8_t cmd, const uint8_t *payload, uint8_t len);
