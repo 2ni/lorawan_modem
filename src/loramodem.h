@@ -6,8 +6,13 @@
 #define LORA_TX       SERIAL1_TX  // PA10 U1RX
 #define LORA_RX       SERIAL1_RX  // PA9 U1TX
 
-#define DBG_ERR(str) "\033[31;1m" str "\033[0m"  // output in red
-#define DBG_OK(str)  "\033[32;1m" str "\033[0m"  // output in green
+#ifdef ANSI_DBG_OUTPUT
+  #define DBG_ERR(str) "\033[31;1m" str "\033[0m"  // output in red
+  #define DBG_OK(str)  "\033[32;1m" str "\033[0m"  // output in green
+#else
+  #define DBG_ERR(str) str
+  #define DBG_OK(str)  str
+#endif
 
 typedef enum {
   OK = 0x00,
