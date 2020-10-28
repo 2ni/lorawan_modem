@@ -49,6 +49,10 @@ bool LoRaWANModem::is_joining(void (*join_done)(Event_code code)) {
     if (join_done != NULL) {
       join_done((Event_code)response[0]);
     }
+
+    if (response[0] == EVT_JOINFAIL) {
+      Serial.printf(DBG_ERR("join event fail") "\n");
+    }
     return false;
   }
 
