@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include "loramodem.h"
-#include "tools.h"
 
 LORAMODEM::LORAMODEM() : modem(LORA_TX, LORA_RX, NC, NC) {
   _pin_cts = 2;
@@ -53,7 +52,7 @@ Status LORAMODEM::write(Lora_cmd cmd, uint8_t *payload, uint8_t len) {
   // wait for modem to set busy line low with 10ms timeout
   while (digitalRead(_pin_cts) == HIGH) {
     if ((millis()-now) > 10) {
-      Serial.println(NOK("cts timeout"));
+      Serial.println(DBG_ERR("cts timeout"));
       return TIMEOUT;
     }
   }
@@ -74,7 +73,7 @@ Status LORAMODEM::write(Lora_cmd cmd, uint8_t *payload, uint8_t len) {
   now = millis();
   while (digitalRead(_pin_cts) == LOW) {
     if ((millis()-now) > 200) {
-      Serial.println(NOK("cts timeout"));
+      Serial.println(DBG_ERR("cts timeout"));
       return TIMEOUT;
     }
   }
@@ -87,7 +86,7 @@ Status LORAMODEM::read(uint8_t *payload, uint8_t *len) {
   // wait for data with 100ms timeout
   while (!modem.available()) {
     if ((millis()-now) > 100) {
-      Serial.println(NOK("receive timeout"));
+      Serial.println(DBG_ERR("receive timeout"));
       return TIMEOUT;
     }
   }
