@@ -28,7 +28,7 @@ Or you can define your own pins for RTS, CTS and define them as follows:
 LoRaWANModem modem(uint8_t pin_cts, uint8_t pin_rts);
 ```
 
-![wiring](images/wiring.jpg "example of wiring")
+![wiring](images/wiring_fritzing.jpg "example of wiring")
 
 ### Usage
 
