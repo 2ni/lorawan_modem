@@ -13,6 +13,15 @@ Arduino library to communicate with the murata lorawan board.
 | USART1_RX | PA10   | TX       | UART TX   |
 | USART1_TX | PA9    | RX       | UART RX   |
 
+
+| Type      | Miromico | Nano     | Type      |
+| --------- | ------   | -------- | --------- |
+|           | GND      | GND      |           |
+| COMMAND   | PA8      | D3       | RTS       |
+| BUSY      | PB1      | D2       | CTS       |
+| UART2_RX  | PA3      | TX       | UART TX   |
+| UART2_TX  | PA2      | RX       | UART RX   |
+
 Or you can define your own pins for RTS, CTS and define them as follows:
 
 ```
