@@ -15,7 +15,11 @@ void LoRaWANModem::begin() {
   while(!uart);
 }
 
-Status LoRaWANModem::join(const uint8_t *appeui, const uint8_t *appkey) {
+/*
+ * only sends a join command
+ * does not wait for network
+ */
+Status LoRaWANModem::command_join(const uint8_t *appeui, const uint8_t *appkey) {
   Status s;
 
   s = command(CMD_SETJOINEUI, appeui, 8);
@@ -44,7 +48,7 @@ bool LoRaWANModem::is_joining(void (*join_done)(Event_code code)) {
   uint8_t response[3] = {0};
   Status s = command(CMD_GETEVENT, response, &len);
   if (s != OK) {
-    Serial.printf(DBG_ERR("joining event cmd error: 0x%02x") "\n", (uint8_t)s);
+    Serial.printf(DBG_ERR("pulling join event error: 0x%02x") "\n", (uint8_t)s);
   }
 
   if (response[0] == EVT_JOINED || response[0] == EVT_JOINFAIL) {
@@ -64,6 +68,46 @@ bool LoRaWANModem::is_joining(void (*join_done)(Event_code code)) {
 
 bool LoRaWANModem::is_joining() {
   return is_joining(NULL);
+}
+
+/*
+ * send join command and wait for network
+ * TODO sleep instead of idling 500ms!
+ * TODO might add a timeout for join?
+ */
+Status LoRaWANModem::join(const uint8_t *appeui, const uint8_t *appkey) {
+  Status s = command_join(appeui, appkey);
+  if (s != OK) {
+    Serial.printf(DBG_ERR("join request error: 0x%02x" "\n"), s);
+    return FAIL;
+  }
+
+  Serial.print("waiting");
+  uint8_t len;
+  uint8_t response[3] = {0};
+
+  unsigned long current_time = millis();
+  while (true) {
+    if ((millis()-current_time) > 500) {
+      s = command(CMD_GETEVENT, response, &len);
+      if (s != OK) {
+        Serial.printf(DBG_ERR("pulling join event error: 0x%02x") "\n", (uint8_t)s);
+      }
+
+      if (response[0] == EVT_JOINED) {
+        Serial.println("joined");
+        return OK;
+      }
+
+      if (response[0] == EVT_JOINFAIL) {
+        Serial.println(DBG_ERR("failed"));
+        return FAIL;
+      }
+
+      current_time = millis();
+      Serial.print(".");
+    }
+  }
 }
 
 Status LoRaWANModem::send(const uint8_t *data, uint8_t len, uint8_t port, uint8_t confirm) {

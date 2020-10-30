@@ -15,17 +15,6 @@ void setup() {
   modem.begin();
   modem.info();
   modem.join(appeui, appkey);
-
-  unsigned long current_time = millis();
-  Serial.print("waiting ");
-  while (modem.is_joining()) {
-    if ((millis()-current_time) > 1000) {
-      current_time = millis();
-      Serial.print(".");
-    }
-  }
-  Serial.println("joined");
-
 }
 
 void loop() {

@@ -107,9 +107,10 @@ class LoRaWANModem {
   public:
     LoRaWANModem(uint8_t pin_cts = 2, uint8_t pin_rts = 3);
     void begin();
-    Status join(const uint8_t *appeui, const uint8_t *appkey);
+    Status command_join(const uint8_t *appeui, const uint8_t *appkey);
     bool is_joining(void (*callback)(Event_code code));
     bool is_joining();
+    Status join(const uint8_t *appeui, const uint8_t *appkey);
     Status send(const uint8_t *data, uint8_t len, uint8_t port = 0x01, uint8_t confirm = 0x00);
 
     Status command(Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload, uint8_t *response, uint8_t *len_response);
