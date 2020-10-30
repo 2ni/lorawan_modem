@@ -107,22 +107,25 @@ class LoRaWANModem {
   public:
     LoRaWANModem(uint8_t pin_cts = 2, uint8_t pin_rts = 3);
     void begin();
-    Status join(const uint8_t *appeui, const uint8_t *appkey);
+    Status command_join(const uint8_t *appeui, const uint8_t *appkey);
     bool is_joining(void (*callback)(Event_code code));
     bool is_joining();
+    Status join(const uint8_t *appeui, const uint8_t *appkey);
     Status send(const uint8_t *data, uint8_t len, uint8_t port = 0x01, uint8_t confirm = 0x00);
 
     Status command(Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload, uint8_t *response, uint8_t *len_response);
     Status command(Lora_cmd cmd, uint8_t *response, uint8_t *len_response);
-    Status write(Lora_cmd cmd);
-    Status write(Lora_cmd cmd, const uint8_t *payload, uint8_t len);
-    Status read(uint8_t *payload, uint8_t *len);
+    Status command(Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload);
+    Status command(Lora_cmd cmd);
     void info();
     void cmd_and_result(const char *name, Lora_cmd cmd);
     void cmd_and_result(const char *name, Lora_cmd cmd, const uint8_t *payload, uint8_t len_payload);
     void print_arr(uint8_t *arr, uint8_t len);
 
   private:
+    Status _write(Lora_cmd cmd);
+    Status _write(Lora_cmd cmd, const uint8_t *payload, uint8_t len);
+    Status _read(uint8_t *payload, uint8_t *len);
     uint8_t _calc_crc(uint8_t cmd, const uint8_t *payload, uint8_t len);
     UART uart;
     uint8_t _pin_cts;
