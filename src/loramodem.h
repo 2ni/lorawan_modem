@@ -32,6 +32,17 @@ typedef enum {
 } Status;
 
 typedef enum {
+  BROWNOUT = 0x01,
+  CRASH    = 0x02,
+  MUTE     = 0x04,
+  JOINED   = 0x08,
+  SUSPEND  = 0x10,
+  UPLOAD   = 0x20,
+  JOINING  = 0x40,
+  STREAM   = 0x80
+} Modem_status;
+
+typedef enum {
   EVT_RESET            = 0x00,
   EVT_ALARM            = 0x01,
   EVT_JOINED           = 0x02,

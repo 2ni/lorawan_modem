@@ -73,9 +73,18 @@ bool LoRaWANModem::is_joining() {
 /*
  * send join command and wait for network
  * TODO sleep instead of idling 500ms!
- * TODO might add a timeout for join?
  */
 Status LoRaWANModem::join(const uint8_t *appeui, const uint8_t *appkey) {
+  // check status, if joined -> do nothing
+  // avoid issues with multiple joins -> seems to create 0x05 busy errors
+  uint8_t st[1] = {0};
+  uint8_t sl;
+  command(CMD_GETSTATUS, st, &sl);
+  // Serial.printf("status: 0x%02x\n", st[0]);
+  if ((Modem_status)st[0] == JOINED) {
+    return OK;
+  }
+
   Status s = command_join(appeui, appkey);
   if (s != OK) {
     Serial.printf(DBG_ERR("join request error: 0x%02x" "\n"), s);
@@ -247,6 +256,7 @@ Status LoRaWANModem::_read(uint8_t *payload, uint8_t *len) {
     }
   }
 
+  while (!uart.available()) {}
   Status rc = (Status)uart.read();
   if (rc != OK) {
     Serial.printf(DBG_ERR("receive error: 0x%02x") "\n", rc);
