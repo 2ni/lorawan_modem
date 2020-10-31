@@ -73,6 +73,7 @@ bool LoRaWANModem::is_joining() {
 /*
  * send join command and wait for network
  * TODO sleep instead of idling 500ms!
+ * TODO if join fails we get back to the modem stuck with "0x05 busy"
  */
 Status LoRaWANModem::join(const uint8_t *appeui, const uint8_t *appkey) {
   // check status, if joined -> do nothing
@@ -82,6 +83,7 @@ Status LoRaWANModem::join(const uint8_t *appeui, const uint8_t *appkey) {
   command(CMD_GETSTATUS, st, &sl);
   // Serial.printf("status: 0x%02x\n", st[0]);
   if ((Modem_status)st[0] == JOINED) {
+    Serial.println(DBG_OK("already joined"));
     return OK;
   }
 
@@ -104,7 +106,7 @@ Status LoRaWANModem::join(const uint8_t *appeui, const uint8_t *appkey) {
       }
 
       if (response[0] == EVT_JOINED) {
-        Serial.println("joined");
+        Serial.println(DBG_OK("joined"));
         return OK;
       }
 
