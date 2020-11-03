@@ -12,7 +12,7 @@ void LoRaWANModem::begin() {
   pinMode(_pin_cts, INPUT);
 
   uart.begin(115200); // data bits 8, stop bits 1, parity none
-  while(!uart);
+  while (!uart);
 }
 
 /*
@@ -22,15 +22,25 @@ void LoRaWANModem::begin() {
 Status LoRaWANModem::command_join(const uint8_t *appeui, const uint8_t *appkey) {
   Status s;
 
+  // should not be called if module joined or is joining network
+  // or it'll return 0x05 error
+
   s = command(CMD_SETJOINEUI, appeui, 8);
   if (s != OK) {
-    Serial.printf(DBG_ERR("set app eui error: 0x%02x") "\n", (uint8_t)s);
+    Serial.printf(DBG_ERR("set app eui error: 0x%02x."), (uint8_t)s);
+    if (s == BUSY) {
+      Serial.print(" Can't set appeui when joined/joining to network");
+    }
+    Serial.println();
     return s;
   }
 
   s = command(CMD_SETNWKKEY, appkey, 16);
   if (s != OK) {
-    Serial.printf(DBG_ERR("set appkey error: 0x%02x") "\n", (uint8_t)s);
+    Serial.printf(DBG_ERR("set appkey error: 0x%02x."), (uint8_t)s);
+    if (s == BUSY) {
+      Serial.println("Can't set appeui when joined/joining to network");
+    }
     return s;
   }
 
@@ -78,24 +88,30 @@ bool LoRaWANModem::is_joining() {
 Status LoRaWANModem::join(const uint8_t *appeui, const uint8_t *appkey) {
   // check status, if joined -> do nothing
   // avoid issues with multiple joins -> seems to create 0x05 busy errors
+  Status s;
   uint8_t st[1] = {0};
   uint8_t sl;
   command(CMD_GETSTATUS, st, &sl);
-  // Serial.printf("status: 0x%02x\n", st[0]);
-  if ((Modem_status)st[0] == JOINED) {
-    Serial.println(DBG_OK("already joined"));
+  Modem_status status = (Modem_status)st[0];
+
+  if (status == JOINED) {
+    Serial.println(DBG_OK("already joined. Send your data!"));
     return OK;
   }
 
-  Status s = command_join(appeui, appkey);
-  if (s != OK) {
-    Serial.printf(DBG_ERR("join request error: 0x%02x" "\n"), s);
-    return FAIL;
+  // do not start an initial join call if already joining to avoid 0x05 busy errors
+  // by setting appeui / appkey
+  if (status != JOINING) {
+    s = command_join(appeui, appkey);
+    if (s != OK) {
+      Serial.printf(DBG_ERR("join request error: 0x%02x") "\n", s);
+      return FAIL;
+    }
   }
 
   Serial.print("waiting");
   uint8_t len;
-  uint8_t response[3] = {0};
+  uint8_t response[1] = {0};
 
   unsigned long current_time = millis();
   while (true) {
@@ -262,7 +278,6 @@ Status LoRaWANModem::_read(uint8_t *payload, uint8_t *len) {
   Status rc = (Status)uart.read();
   if (rc != OK) {
     Serial.printf(DBG_ERR("receive error: 0x%02x") "\n", rc);
-    return rc;
   }
 
   while (!uart.available()) {}
@@ -280,7 +295,7 @@ Status LoRaWANModem::_read(uint8_t *payload, uint8_t *len) {
   }
 
   *len = l;
-  return OK;
+  return rc;
 }
 
 void LoRaWANModem::info() {

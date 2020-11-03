@@ -1,4 +1,4 @@
-Arduino library to communicate with the murata lorawan board.
+Arduino library to communicate with the lorawan module Murata [ST B-L072Z-LRWAN1](https://www.st.com/en/evaluation-tools/b-l072z-lrwan1.html) or the [Miromico FMLR-72-U-STL0Z](https://miromico.ch/portfolio/fmlr_stm/).
 
 ### Wiring
 
